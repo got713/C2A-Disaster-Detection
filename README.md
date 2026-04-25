@@ -13,6 +13,18 @@ As per the guidelines, this project covers:
 3. **Admin Dashboard (`admin-dashboard/`)**: A pure HTML/JS web dashboard for monitoring real-time disaster locations using Leaflet maps, viewing uploaded imagery, and comparing the performance metrics of the trained AI models.
 4. **Mobile App (`c2a_app/`)**: A lightweight Flutter client that securely authenticates users, allows them to capture or upload UAV images, fetches their live GPS location, and displays real-time AI classification results.
 
+## 📊 Dataset Information
+> **Note:** The raw dataset images are intentionally excluded from this GitHub repository via `.gitignore` because of their large size.
+
+To reproduce the training results:
+1. Download the Disaster Classification Dataset from [Kaggle / Roboflow]. *(Note: Replace this bracket with your actual dataset link if available, or upload the dataset to Google Drive and put the link here).*
+2. Extract the dataset into the root directory under a folder named `dataset/`.
+3. Ensure the structure looks like this:
+   - `dataset/fire/`
+   - `dataset/flood/`
+   - `dataset/collapsed_building/`
+   - `dataset/normal/`
+
 ## 🚀 How to Run the Project
 
 ### 1. Training the Machine Learning Model (Optional)
