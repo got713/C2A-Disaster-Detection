@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C2A Admin — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0A0E1A;--card:#111827;--card2:#1A2235;--red:#FF4444;--cyan:#00D4FF;--t1:#fff;--t2:#94A3B8;--t3:#475569;--border:rgba(255,255,255,0.08)}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+
+/* Background */
+.bg-glow{position:fixed;inset:0;pointer-events:none}
+.glow1{position:absolute;top:-150px;left:-150px;width:500px;height:500px;background:radial-gradient(circle,rgba(255,68,68,.12),transparent 60%);border-radius:50%}
+.glow2{position:absolute;bottom:-150px;right:-100px;width:600px;height:600px;background:radial-gradient(circle,rgba(0,212,255,.08),transparent 60%);border-radius:50%}
+.grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:40px 40px}
+
+/* Card */
+.login-wrap{position:relative;z-index:10;width:100%;max-width:420px;padding:20px}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:40px;backdrop-filter:blur(10px)}
+
+/* Header */
+.login-header{text-align:center;margin-bottom:32px}
+.logo-circle{width:70px;height:70px;background:linear-gradient(135deg,var(--red),#FF6B6B);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px;box-shadow:0 0 40px rgba(255,68,68,.35)}
+.login-header h1{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.login-header p{color:var(--t2);font-size:13px;margin-top:6px}
+
+/* Tag */
+.system-tag{display:inline-flex;align-items:center;gap:6px;background:rgba(255,68,68,.12);border:1px solid rgba(255,68,68,.25);color:var(--red);font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:10px;letter-spacing:1px}
+.tag-dot{width:6px;height:6px;background:var(--red);border-radius:50%;animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Form */
+.form-group{margin-bottom:18px}
+.form-label{font-size:12px;font-weight:600;color:var(--t2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;display:block}
+.form-input{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--t1);font-size:14px;font-family:inherit;outline:none;transition:.2s}
+.form-input:focus{border-color:rgba(255,68,68,.5);box-shadow:0 0 0 3px rgba(255,68,68,.1)}
+.form-input::placeholder{color:var(--t3)}
+.input-wrap{position:relative}
+.input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px}
+.input-wrap .form-input{padding-left:42px}
+.eye-btn{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--t3);font-size:16px;padding:4px;transition:.2s}
+.eye-btn:hover{color:var(--t1)}
+
+/* Remember */
+.form-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.checkbox-wrap{display:flex;align-items:center;gap:8px;cursor:pointer}
+.checkbox-wrap input{width:15px;height:15px;accent-color:var(--red);cursor:pointer}
+.checkbox-wrap span{font-size:13px;color:var(--t2)}
+.forgot-link{font-size:13px;color:var(--red);text-decoration:none;font-weight:500}
+.forgot-link:hover{text-decoration:underline}
+
+/* Button */
+.login-btn{width:100%;background:linear-gradient(135deg,var(--red),#FF6B6B);border:none;border-radius:12px;padding:15px;color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:.3s;box-shadow:0 8px 24px rgba(255,68,68,.3)}
+.login-btn:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(255,68,68,.4)}
+.login-btn:active{transform:translateY(0)}
+.login-btn.loading{opacity:.7;cursor:not-allowed;transform:none}
+
+/* Divider */
+.divider{display:flex;align-items:center;gap:12px;margin:24px 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.divider span{font-size:12px;color:var(--t3)}
+
+/* Demo credentials */
+.demo-creds{background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:12px;padding:14px 16px}
+.demo-title{font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.demo-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.demo-key{color:var(--t2)}
+.demo-val{color:var(--t1);font-weight:600;font-family:monospace;font-size:13px}
+
+/* Error */
+.error-msg{background:rgba(255,68,68,.1);border:1px solid rgba(255,68,68,.3);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px;display:none}
+.error-msg.show{display:block}
+
+/* Footer */
+.login-footer{text-align:center;margin-top:20px;font-size:12px;color:var(--t3)}
+.login-footer a{color:var(--red);text-decoration:none}
+</style>
+</head>
+<body>
+
+<div class="bg-glow"><div class="glow1"></div><div class="glow2"></div></div>
+<div class="grid-bg"></div>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="system-tag"><span class="tag-dot"></span> ADMIN PORTAL</div>
+      <div class="logo-circle">🛰️</div>
+      <h1>C2A Admin Dashboard</h1>
+      <p>UAV Human Detection System · Admin Access</p>
+    </div>
+
+    <div id="error-msg" class="error-msg">
+      ❌ Invalid credentials. Please try again.
+    </div>
+
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <div class="input-wrap">
+          <span class="input-icon">👤</span>
+          <input id="username" type="text" class="form-input" placeholder="Enter your username" autocomplete="username">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input id="password" type="password" class="form-input" placeholder="Enter your password" autocomplete="current-password">
+          <button type="button" class="eye-btn" onclick="togglePassword()">👁️</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="checkbox-wrap">
+          <input type="checkbox" id="remember">
+          <span>Remember me</span>
+        </label>
+        <a href="#" class="forgot-link">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="login-btn" id="login-btn">
+        Sign In to Dashboard
+      </button>
+    </form>
+
+    <div class="divider"><span>Demo Credentials</span></div>
+
+    <div class="demo-creds">
+      <div class="demo-title">ℹ️ Test Account</div>
+      <div class="demo-row">
+        <span class="demo-key">Username:</span>
+        <span class="demo-val">admin</span>
+      </div>
+      <div class="demo-row">
+        <span class="demo-key">Password:</span>
+        <span class="demo-val">c2a2024</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-footer">
+    C2A Detect System &nbsp;·&nbsp; <a href="#">Documentation</a> &nbsp;·&nbsp; v1.0.0
+  </div>
+</div>
+
+<script>
+function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('login-btn');
+  const errMsg = document.getElementById('error-msg');
+  const user = document.getElementById('username').value.trim();
+  const pass = document.getElementById('password').value.trim();
+
+  btn.classList.add('loading');
+  btn.textContent = 'Signing in...';
+  errMsg.classList.remove('show');
+
+  setTimeout(() => {
+    if (user === 'admin' && pass === 'c2a2024') {
+      btn.textContent = '✅ Success! Redirecting...';
+      setTimeout(() => { window.location.href = 'index.html'; }, 800);
+    } else {
+      btn.classList.remove('loading');
+      btn.textContent = 'Sign In to Dashboard';
+      errMsg.classList.add('show');
+    }
+  }, 1200);
+}
+
+function togglePassword() {
+  const input = document.getElementById('password');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+// Auto-fill demo on click
+document.querySelector('.demo-creds').addEventListener('click', () => {
+  document.getElementById('username').value = 'admin';
+  document.getElementById('password').value = 'c2a2024';
+});
+</script>
+</body>
+</html>

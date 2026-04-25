@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C2A Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg: #0A0E1A; --card: #111827; --card-hover: #1A2235;
+      --primary: #FF4444; --accent: #00D4FF; --success: #10B981;
+      --text: #ffffff; --text-muted: #94A3B8; --border: rgba(255,255,255,0.08);
+      --sidebar-w: 260px;
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+    /* Login Overlay */
+    #login-overlay {
+      position: fixed; inset: 0; background: var(--bg); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-box {
+      background: var(--card); padding: 40px; border-radius: 16px; width: 400px;
+      border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .login-box h2 { margin-bottom: 20px; text-align: center; }
+    .input-group { margin-bottom: 15px; }
+    .input-group input {
+      width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); outline: none;
+    }
+    .btn {
+      width: 100%; padding: 12px; background: var(--primary); color: white;
+      border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s;
+    }
+    .btn:hover { opacity: 0.9; }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-w); background: var(--card); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+    }
+    .logo { padding: 24px; font-size: 24px; font-weight: 800; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .logo span { color: var(--primary); }
+    .nav { padding: 20px 10px; flex: 1; }
+    .nav-item {
+      padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; cursor: pointer;
+      color: var(--text-muted); font-weight: 500; transition: 0.2s;
+    }
+    .nav-item:hover, .nav-item.active { background: var(--border); color: var(--text); }
+    .logout-btn { margin: 20px; padding: 12px; background: rgba(255,68,68,0.1); color: var(--primary); text-align: center; border-radius: 8px; cursor: pointer; font-weight: 600; }
+
+    /* Main Content */
+    .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+    .header { padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .content { padding: 32px; }
+
+    /* Pages */
+    .page { display: none; }
+    .page.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Grid & Cards */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 32px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .card h3 { color: var(--text-muted); font-size: 14px; margin-bottom: 8px; }
+    .card .value { font-size: 32px; font-weight: 700; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-weight: 500; font-size: 14px; }
+    tr:hover { background: rgba(255,255,255,0.02); }
+    
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge.user { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+    .badge.admin { background: rgba(255, 68, 68, 0.1); color: var(--primary); }
+
+    /* Maps & Charts */
+    #map { height: 500px; border-radius: 12px; border: 1px solid var(--border); z-index: 1; }
+    .chart-container { height: 300px; }
+
+    /* Modal Image View */
+    .modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000;
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-content {
+      background: var(--card); padding: 20px; border-radius: 12px; max-width: 800px; width: 90%;
+      border: 1px solid var(--border); position: relative;
+    }
+    .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+    .modal img { width: 100%; height: auto; border-radius: 8px; margin-top: 15px; }
+
+  </style>
+</head>
+<body>
+
+  <!-- Login Overlay -->
+  <div id="login-overlay">
+    <div class="login-box">
+      <h2>Admin Login</h2>
+      <div id="login-error" style="color:var(--primary); margin-bottom: 10px; font-size: 14px;"></div>
+      <div class="input-group">
+        <input type="email" id="email" placeholder="Admin Email (e.g. admin@c2a.ai)">
+      </div>
+      <div class="input-group">
+        <input type="password" id="password" placeholder="Password">
+      </div>
+      <button class="btn" onclick="login()">Sign In</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">
+      <span>●</span> C2A Admin
+    </div>
+    <div class="nav">
+      <div class="nav-item active" onclick="nav('overview')">Overview Dashboard</div>
+      <div class="nav-item" onclick="nav('map')">Disaster Map</div>
+      <div class="nav-item" onclick="nav('users')">Users Management</div>
+      <div class="nav-item" onclick="nav('detections')">Detection History</div>
+      <div class="nav-item" style="color: var(--accent); margin-top: 20px; border: 1px solid var(--accent);" onclick="nav('evaluation')">✨ AI Evaluation Report</div>
+    </div>
+    <div class="logout-btn" onclick="logout()">Logout</div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <div class="header">
+      <h2 id="page-title">Overview Dashboard</h2>
+      <div style="color: var(--text-muted);" id="admin-name">Admin User</div>
+    </div>
+    <div class="content">
+
+      <!-- Overview Page -->
+      <div id="page-overview" class="page active">
+        <div class="grid">
+          <div class="card">
+            <h3>Total Detections</h3>
+            <div class="value" id="stat-detections">0</div>
+          </div>
+          <div class="card">
+            <h3>Humans Found</h3>
+            <div class="value" id="stat-humans">0</div>
+          </div>
+          <div class="card">
+            <h3>Active Users</h3>
+            <div class="value" id="stat-users">0</div>
+          </div>
+          <div class="card">
+            <h3>Best Model mAP</h3>
+            <div class="value" id="stat-map" style="color: var(--accent);">0.6883</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Recent Detections Overview</h3>
+          <table id="overview-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>User</th>
+                <th>Disaster</th>
+                <th>Humans</th>
+                <th>Model</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Map Page -->
+      <div id="page-map" class="page">
+        <div class="card">
+          <h3>Disaster Locations</h3>
+          <p style="color:var(--text-muted); margin-bottom: 20px;">Real-time map of detected disasters based on user submissions.</p>
+          <div id="map"></div>
+        </div>
+      </div>
+
+      <!-- Users Page -->
+      <div id="page-users" class="page">
+        <div class="card">
+          <h3>Registered Users</h3>
+          <table id="users-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Total Scans</th>
+                <th>Joined</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detections Page -->
+      <div id="page-detections" class="page">
+        <div class="card">
+          <h3>Detection Logs</h3>
+          <table id="detections-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>User</th>
+                <th>Disaster Type</th>
+                <th>Location</th>
+                <th>Humans</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AI Evaluation Page -->
+      <div id="page-evaluation" class="page">
+        <div class="card" style="margin-bottom: 24px;">
+          <h3 style="color: var(--accent); font-size: 18px; margin-bottom: 10px;">Model Comparison (Scratch CNN vs Transfer Learning)</h3>
+          <p style="color:var(--text-muted); margin-bottom: 20px;">Detailed metrics required by the project guidelines.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Model Architecture</th>
+                <th>Trainable Params</th>
+                <th>Training Accuracy</th>
+                <th>Validation / Test Accuracy</th>
+                <th>Final F1-Score</th>
+                <th>Training Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Scratch CNN</strong> <span style="font-size: 11px; color: var(--text-muted);">(Built from scratch)</span></td>
+                <td>~1.2M</td>
+                <td>90.2%</td>
+                <td>88.5%</td>
+                <td>0.87</td>
+                <td>~15 mins</td>
+              </tr>
+              <tr style="background: rgba(0, 212, 255, 0.05); border-left: 3px solid var(--accent);">
+                <td><strong>MobileNetV2</strong> <span style="font-size: 11px; color: var(--text-muted);">(Transfer Learning + Fine Tuning)</span></td>
+                <td>~2.4M</td>
+                <td>92.7%</td>
+                <td>92.8%</td>
+                <td>0.95 (Normal)</td>
+                <td>~20 mins</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h3 style="color: var(--success); font-size: 16px;">Class: Normal</h3>
+            <div class="value" style="font-size: 24px;">95% F1-Score</div>
+            <p style="color:var(--text-muted); font-size: 12px; margin-top: 8px;">Precision: 0.91 | Recall: 1.00</p>
+          </div>
+          <div class="card">
+            <h3 style="color: var(--primary); font-size: 16px;">Class: Fire</h3>
+            <div class="value" style="font-size: 24px;">86% F1-Score</div>
+            <p style="color:var(--text-muted); font-size: 12px; margin-top: 8px;">Precision: 0.94 | Recall: 0.79</p>
+          </div>
+          <div class="card">
+            <h3 style="color: #F59E0B; font-size: 16px;">Class: Collapsed</h3>
+            <div class="value" style="font-size: 24px;">82% F1-Score</div>
+            <p style="color:var(--text-muted); font-size: 12px; margin-top: 8px;">Precision: 0.98 | Recall: 0.71</p>
+          </div>
+          <div class="card">
+            <h3 style="color: #3B82F6; font-size: 16px;">Class: Flood</h3>
+            <div class="value" style="font-size: 24px;">82% F1-Score</div>
+            <p style="color:var(--text-muted); font-size: 12px; margin-top: 8px;">Precision: 0.96 | Recall: 0.72</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Image Modal -->
+  <div class="modal" id="image-modal">
+    <div class="modal-content">
+      <div class="close-btn" onclick="closeImage()">×</div>
+      <h3>Detection Image</h3>
+      <img id="modal-img" src="" alt="Loading...">
+    </div>
+  </div>
+
+  <script>
+    const API = "http://localhost:5000/api";
+    let token = localStorage.getItem("admin_token");
+    let map;
+
+    // Initialize
+    if (token) {
+      document.getElementById("login-overlay").style.display = "none";
+      loadData();
+    }
+
+    async function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({email, password})
+        });
+        const data = await res.json();
+        if (data.success && data.data.user.role === "admin") {
+          token = data.data.token;
+          localStorage.setItem("admin_token", token);
+          document.getElementById("login-overlay").style.display = "none";
+          document.getElementById("admin-name").innerText = data.data.user.name;
+          loadData();
+        } else {
+          document.getElementById("login-error").innerText = "Access denied. Admin only.";
+        }
+      } catch (e) {
+        document.getElementById("login-error").innerText = "Server connection error.";
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("admin_token");
+      location.reload();
+    }
+
+    function nav(page) {
+      document.querySelectorAll(".nav-item").forEach(e => e.classList.remove("active"));
+      event.target.classList.add("active");
+      document.querySelectorAll(".page").forEach(e => e.classList.remove("active"));
+      document.getElementById(`page-${page}`).classList.add("active");
+      
+      const titles = {
+        'overview': 'Overview Dashboard',
+        'map': 'Disaster Map',
+        'users': 'Users Management',
+        'detections': 'Detection History',
+        'evaluation': 'AI Evaluation Report'
+      };
+      document.getElementById("page-title").innerText = titles[page];
+
+      if (page === 'map') setTimeout(initMap, 100);
+    }
+
+    async function req(endpoint) {
+      const res = await fetch(`${API}/admin/${endpoint}`, {
+        headers: {"Authorization": `Bearer ${token}`}
+      });
+      if (res.status === 401 || res.status === 403) logout();
+      return (await res.json()).data;
+    }
+
+    async function loadData() {
+      try {
+        const stats = await req("stats");
+        document.getElementById("stat-detections").innerText = stats.total_detections;
+        document.getElementById("stat-humans").innerText = stats.total_humans;
+        document.getElementById("stat-users").innerText = stats.total_users;
+
+        const users = await req("users");
+        const tbodyU = document.querySelector("#users-table tbody");
+        tbodyU.innerHTML = "";
+        users.forEach(u => {
+          tbodyU.innerHTML += `
+            <tr>
+              <td>${u.name}</td>
+              <td>${u.email}</td>
+              <td><span class="badge ${u.role}">${u.role.toUpperCase()}</span></td>
+              <td>${u.detection_count}</td>
+              <td>${new Date(u.created_at).toLocaleDateString()}</td>
+            </tr>
+          `;
+        });
+
+        const detections = await req("detections?limit=100");
+        const tbodyD = document.querySelector("#detections-table tbody");
+        const tbodyO = document.querySelector("#overview-table tbody");
+        tbodyD.innerHTML = ""; tbodyO.innerHTML = "";
+        
+        window.allDetections = detections; // save for map
+
+        detections.forEach((d, i) => {
+          const date = new Date(d.created_at).toLocaleString();
+          const tr = `
+            <tr>
+              <td>${date}</td>
+              <td>${d.user_name}</td>
+              <td>${d.disaster_type}</td>
+              <td>${d.location_name || "Unknown"}</td>
+              <td>${d.total_humans}</td>
+              <td><button class="btn" style="padding: 6px 12px; font-size:12px; width:auto;" onclick="viewImage('${d.id}')">View Image</button></td>
+            </tr>
+          `;
+          tbodyD.innerHTML += tr;
+          if (i < 5) {
+            tbodyO.innerHTML += `
+              <tr>
+                <td>${new Date(d.created_at).toLocaleDateString()}</td>
+                <td>${d.user_name}</td>
+                <td>${d.disaster_type}</td>
+                <td>${d.total_humans}</td>
+                <td>${d.model_name}</td>
+              </tr>
+            `;
+          }
+        });
+      } catch (e) {
+        console.error("Load error", e);
+      }
+    }
+
+    function initMap() {
+      if (map) return;
+      map = L.map('map').setView([30.0444, 31.2357], 6); // Default Egypt
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+
+      if (window.allDetections) {
+        window.allDetections.forEach(d => {
+          if (d.latitude && d.longitude) {
+            const marker = L.circleMarker([d.latitude, d.longitude], {
+              color: 'red', fillColor: '#f03', fillOpacity: 0.5, radius: 8
+            }).addTo(map);
+            marker.bindPopup(`<b>${d.disaster_type}</b><br>${d.total_humans} humans found<br>By: ${d.user_name}`);
+          }
+        });
+      }
+    }
+
+    async function viewImage(id) {
+      document.getElementById("image-modal").style.display = "flex";
+      document.getElementById("modal-img").src = "";
+      try {
+        const res = await req(`image/${id}`);
+        document.getElementById("modal-img").src = res.image;
+      } catch (e) {
+        alert("Could not load image");
+        closeImage();
+      }
+    }
+
+    function closeImage() {
+      document.getElementById("image-modal").style.display = "none";
+    }
+
+  </script>
+</body>
+</html>
